@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tree Structure</title>
+    <style>
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 20px;
+      }
+
+      h1 {
+        text-align: center;
+        font-family: "Courier New", Courier, monospace;
+        color: #333;
+      }
+
+      ul {
+        list-style-type: none;
+        padding-left: 20px;
+      }
+
+      li {
+        margin: 25px 0;
+      }
+
+      .caret {
+        cursor: pointer;
+        user-select: none;
+        color: #333;
+        font-weight: bold;
+        border: 1px solid black;
+        padding: 8px;
+        box-shadow: 5px 5px 5px #333;
+      }
+
+      .caret::before {
+        content: "\25B6"; /* Right arrow */
+        color: black;
+        display: inline-block;
+        margin-right: 6px;
+      }
+
+      .caret-down::before {
+        transform: rotate(90deg); /* Rotate caret to point down */
+      }
+
+      .nested {
+        display: none;
+        padding-left: 20px;
+        transition: max-height 0.3s ease-out;
+        overflow: hidden;
+      }
+
+      .active {
+        display: block;
+        transition: max-height 0.3s ease-in;
+      }
+
+      /* Styling for items without children */
+      .no-children {
+        color: gray; /* Color for items with no children */
+        font-style: italic; /* Italicize text */
+      }
+    </style>
+  </head>
+  <body>
+    <h1
+      style="
+        text-align: center;
+        font-family: 'Courier New', Courier, monospace;
+      ">
+      Tree Structure
+    </h1>
+
+    <div style="text-align: center; margin-bottom: 20px">
+      <input
+        type="text"
+        id="search-box"
+        placeholder="Search tree..."
+        onkeydown="if (event.key === 'Enter') document.getElementById('search-btn').click();" />
+      <button id="search-btn">Search</button>
+    </div>
+
+    <div
+      id="tree-container"
+      style="font-family: Arial, Helvetica, sans-serif"></div>
+
+    <script>
+      // fetch data to build the tree structure
+      async function fetchTreeData(searchString = "") {
+        try {
+          const response = await fetch(
+            `/tree-data?searchQuery=${searchString}` // Fetch full data if searchString is empty
+          );
+          const data = await response.json();
+
+          console.log("Fetched Data:", data); // Check the fetched data
+
+          document.getElementById("tree-container").innerHTML = "";
+          const treeData = buildTree(data, null); // Start with null parentId
+          console.log("Tree Data:", treeData); // Check the built tree structure
+
+          // render the tree structure
+          renderTree(treeData, document.getElementById("tree-container"));
+        } catch (error) {
+          console.error("Error fetching data:", error);
+        }
+      }
+
+      // Event listener for the search button
+      document
+        .getElementById("search-btn")
+        .addEventListener("click", function () {
+          const searchString = document
+            .getElementById("search-box")
+            .value.trim(); // Fetch the search value
+          if (searchString === "") {
+            // When the search box is empty, fetch full data
+            fetchTreeData(""); // Fetch full data
+          } else {
+            // Fetch filtered data based on the search query
+            fetchTreeData(searchString);
+          }
+        });
+
+      // recursive function to build the tree structure
+      function buildTree(data, parentId) {
+        const tree = [];
+        console.log(`Building tree for parentId: ${parentId}`);
+        data.forEach((item) => {
+          console.log(
+            `Item ID: ${item.id}, Name: ${item.name}, pef_item_id: ${item.pef_item_id}, parentId: ${parentId}`
+          );
+          if (item.pef_item_id === parentId) {
+            console.log(`Item ${item.id} is a child of ${parentId}`);
+            const children = buildTree(data, item.id); // recursively find children
+            if (children.length) {
+              item.children = children; // add children if they exist
+            }
+            tree.push(item); // add the node to the tree
+          }
+        });
+        console.log(`Built tree for parentId: ${parentId}`, tree);
+        return tree;
+      }
+
+      // recursive function to render tree into HTML
+      function renderTree(tree, container) {
+        const ul = document.createElement("ul"); // create <ul> element
+        tree.forEach((node) => {
+          const li = document.createElement("li"); // create <li> element
+          const span = document.createElement("span"); // create <span> element
+
+          span.classList.add("caret");
+          span.textContent = node.name;
+          li.appendChild(span); // append span to <li> element
+
+          // check for children and recursively render them
+          if (node.children) {
+            const nestedUl = document.createElement("ul");
+            nestedUl.classList.add("nested"); // initially hidden
+            renderTree(node.children, nestedUl); // recursively render children
+            li.appendChild(nestedUl);
+          } else {
+            span.style.color = "gray";
+          }
+
+          ul.appendChild(li);
+        });
+        container.appendChild(ul);
+
+        const toggler = document.getElementsByClassName("caret");
+        for (let i = 0; i < toggler.length; i++) {
+          toggler[i].addEventListener("click", function () {
+            this.parentElement
+              .querySelector(".nested")
+              .classList.toggle("active");
+            this.classList.toggle("caret-down");
+          });
+        }
+      }
+
+      window.onload = () => fetchTreeData();
+    </script>
+  </body>
+</html>
